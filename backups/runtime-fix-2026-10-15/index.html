@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOMEX — Intelligence Hub</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#0b0e15;color:#e9f1f8;min-height:100vh}
+header{background:#101521;border-bottom:1px solid #1c2434;padding:16px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#3ddc84,#00b4d8);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+h1{font-size:19px;margin:0}h1 small{color:#8fa3b3;font-size:10px;display:block;letter-spacing:1px}
+.power{margin-left:auto;text-align:right}
+.power .k{font-size:10px;color:#8fa3b3;text-transform:uppercase}
+.power .v{font-size:20px;color:#3ddc84;font-weight:700}
+.wrap{max-width:1120px;margin:0 auto;padding:22px}
+.energybar{background:#0c121c;border:1px solid #1c2434;border-radius:12px;padding:14px 18px;margin-bottom:20px}
+.energybar .top{display:flex;justify-content:space-between;font-size:12px;color:#8fa3b3;margin-bottom:8px}
+.track{height:12px;background:#141c2a;border-radius:8px;overflow:hidden}
+.track i{height:100%;display:block;border-radius:8px;background:linear-gradient(90deg,#00b4d8,#3ddc84);transition:width .5s}
+.track i.warn{background:linear-gradient(90deg,#f59e0b,#f87171)}
+.controls{display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap}
+input,select{background:#0c121c;border:1px solid #1c2434;border-radius:8px;color:#e9f1f8;padding:8px 12px;font-size:13px}
+input:focus,select:focus{outline:none;border-color:#00b4d8}
+button{background:#131b2a;border:1px solid #1c2434;color:#e9f1f8;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600}
+button:hover{border-color:#00b4d8;background:#1a2436}
+button.go{background:linear-gradient(135deg,#0aa05a,#00b4d8);border-color:#00b4d8;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.room{grid-column:1/-1;font-size:12px;color:#8fa3b3;text-transform:uppercase;letter-spacing:2px;margin-top:8px;border-bottom:1px solid #1c2434;padding-bottom:6px}
+.device{background:#101521;border:1px solid #1c2434;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:.15s}
+.device.on{border-color:#0e5a3d;background:#0d1520}
+.device .dhead{display:flex;align-items:center;gap:10px}
+.device .dicon{font-size:20px}
+.device .dname{font-weight:700;font-size:13px;flex:1}
+.device .dtype{font-size:10px;color:#8fa3b3}
+.switch{width:44px;height:24px;border-radius:20px;background:#1c2434;position:relative;cursor:pointer;transition:.2s;flex-shrink:0}
+.switch::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#8fa3b3;top:3px;left:3px;transition:.2s}
+.switch.on{background:#00b4d8}
+.switch.on::after{left:23px;background:#fff}
+.device .watt{font-size:12px;color:#8fa3b3;display:flex;justify-content:space-between}
+.device .watt b{color:#3ddc84;font-variant-numeric:tabular-nums}
+.device .del{align-self:flex-end;background:none;border:none;color:#4a5a6a;cursor:pointer;font-size:14px;padding:4px}
+.device .del:hover{color:#f87171}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.metric{background:#0c121c;border:1px solid #1c2434;border-radius:10px;padding:12px;text-align:center}
+.metric .k{font-size:10px;color:#8fa3b3;text-transform:uppercase}
+.metric .v{font-size:21px;font-weight:800;color:#00d5ff;margin-top:4px}
+.metric .v.em{color:#f59e0b}
+canvas#usage{width:100%;height:150px}
+.empty{color:#8fa3b3;text-align:center;padding:30px;font-size:13px;grid-column:1/-1}
+</style></head>
+<body>
+<header><div class="logo">▼</div><h1>HOMEX<small>INTELLIGENCE HUB</small></h1>
+<div class="power"><div class="k">Live Draw</div><div class="v" id="livePower">0 W</div></div></header>
+<div class="wrap">
+<div class="metric" style="margin-bottom:16px"><div class="k">Devices Online</div><div class="v" id="onlineCount">0 / 0</div></div>
+<div class="summary">
+<div class="metric"><div class="k">Total Load</div><div class="v" id="totalLoad">0 W</div></div>
+<div class="metric"><div class="k">Today Energy</div><div class="v em" id="todayEnergy">0 Wh</div></div>
+<div class="metric"><div class="k">Capacity</div><div class="v" id="capPct">0%</div></div>
+<div class="metric"><div class="k">Cost / day</div><div class="v" id="cost">$0.00</div></div>
+</div>
+<div class="energybar">
+<div class="top"><span>Grid Capacity · <span id="capLabel">0 W</span></span><span id="capText">0% used</span></div>
+<div class="track"><i id="capBar" style="width:0%"></i></div>
+</div>
+<div class="controls">
+<input id="devName" placeholder="Device name…">
+<select id="devType"><option>Smart Light</option><option>Thermostat</option><option>Camera</option><option>Speaker</option><option>Plug</option><option>Sensor</option><option>Charger</option><option>Other</option></select>
+<input id="devRoom" placeholder="Room (e.g. Living Room)…" style="width:150px">
+<input id="devWatt" type="number" placeholder="Watts" value="10" style="width:90px">
+<button class="go" id="addBtn">Add Device</button>
+<button id="clearBtn">Reset</button>
+</div>
+<div class="grid" id="grid"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const KEY='hx_devices';
+const store=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(store));
+let devices=store();
+let history=Array(24).fill(0);
+let energyToday=0,energyTimer=0;
+const ICONS={'Smart Light':'💡','Thermostat':'🌡','Camera':'📷','Speaker':'🔊','Plug':'🔌','Sensor':'📡','Charger':'⚡','Other':'📱'};
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+if(!devices.length){devices=[{name:'Living Lamp',type:'Smart Light',room:'Living Room',w:8,on:true},
+{name:'Bedroom Heat',type:'Thermostat',room:'Bedroom',w:1200,on:true},
+{name:'Front Camera',type:'Camera',room:'Entrance',w:6,on:true},
+{name:'Kitchen Plug',type:'Plug',room:'Kitchen',w:60,on:false},
+{name:'Study Speaker',type:'Speaker',room:'Study',w:15,on:false}];save();}
+
+function compute(){
+  let load=0,on=0;
+  const rooms={};
+  devices.forEach(d=>{
+    const r=d.room||'General';rooms[r]=rooms[r]||[];rooms[r].push(d);
+    if(d.on){load+=+d.w||0;on++;}
+  });
+  $('livePower').textContent=load.toFixed(0)+' W';
+  $('totalLoad').textContent=load.toFixed(0)+' W';
+  $('onlineCount').textContent=on+' / '+devices.length;
+  const cap=3000;const pct=Math.min(100,Math.round(load/cap*100));
+  $('capPct').textContent=pct+'%';
+  $('capBar').style.width=pct+'%';
+  $('capLabel').textContent=load.toFixed(0)+' W';
+  $('capText').textContent=pct+'% used';
+  $('capBar').classList.toggle('warn',pct>70);
+  const ratePerHr=energyToday;
+  $('todayEnergy').textContent=Math.round(energyToday)+' Wh';
+  $('cost').textContent='$'+(energyToday/1000*0.18).toFixed(2);
+  return {load,rooms};
+}
+
+function renderDevices(){
+  const {load,rooms}=compute();
+  const g=$('grid');g.innerHTML='';
+  let prevRoom='__none__';
+  Object.keys(rooms).sort((a,b)=>a.localeCompare(b)).forEach(room=>{
+    if(room===prevRoom)return;
+    prevRoom=room;
+    const el=document.createElement('div');el.className='room';el.textContent='▸ '+room;g.appendChild(el);
+    rooms[room].forEach(d=>{
+      const div=document.createElement('div');div.className='device '+(d.on?'on':'');
+      div.innerHTML=`<div class="dhead"><span class="dicon">${ICONS[d.type]||'📱'}</span>
+<div style="flex:1"><div class="dname">${esc(d.name)}</div><div class="dtype">${esc(d.type)}</div></div>
+<div class="switch${d.on?' on':''}" data-i="${devices.indexOf(d)}"></div></div>
+<div class="watt"><span>draw</span><b>${d.on?(+d.w||0).toFixed(0):'0'} W</b></div>
+<button class="del" data-i="${devices.indexOf(d)}">✕ remove</button>`;
+      g.appendChild(div);
+    });
+  });
+  if(!devices.length)g.innerHTML='<div class="empty">No devices — add one above.</div>';
+  drawChart();
+}
+
+function drawChart(){
+  const c=$('usage'),ctx=c.getContext('2d');
+  const dpr=devicePixelRatio||1,W=c.clientWidth,H=c.clientHeight;
+  c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#141c2a';
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(0,H/4*i);ctx.lineTo(W,H/4*i);ctx.stroke();}
+  const max=Math.max(3,...history);
+  const {load}=compute();
+  history.push(Math.round(load));history.shift();
+  ctx.beginPath();ctx.strokeStyle='#00b4d8';ctx.lineWidth=2;
+  history.forEach((v,i)=>{const x=i/(history.length-1)*(W-8)+4;const y=H-6-(v/max)*(H-20);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.stroke();
+  ctx.fillStyle='#3ddc84';ctx.beginPath();
+  history.forEach((v,i)=>{const x=i/(history.length-1)*(W-8)+4;const y=H-6-(v/max)*(H-20);ctx.arc(x,y,2.5,0,Math.PI*2);});
+  ctx.fill();
+}
+
+$('grid').onclick=e=>{
+  const del=e.target.closest('.del');
+  if(del){if(confirm('Remove device?')){devices.splice(+del.dataset.i,1);save();renderDevices();}return;}
+  const sw=e.target.closest('.switch');
+  if(sw){devices[+sw.dataset.i].on=!devices[+sw.dataset.i].on;save();renderDevices();}
+};
+$('addBtn').onclick=()=>{
+  const n=$('devName').value.trim();if(!n){alert('Enter device name.');return;}
+  devices.push({name:n,type:$('devType').value,room:$('devRoom').value.trim()||'General',w:+$('devWatt').value||0,on:true});
+  save();$('devName').value='';renderDevices();
+};
+$('clearBtn').onclick=()=>{if(confirm('Remove all devices?')){devices=[];save();renderDevices();energyToday=0;}};
+window.addEventListener('resize',drawChart);
+renderDevices();
+setInterval(()=>{
+  const onDevs=devices.filter(d=>d.on);
+  energyTimer++;
+  if(energyTimer%15===0){ // every 15 ticks ≈ 1 hour sim
+    const load=onDevs.reduce((a,d)=>a+(+d.w||0),0);
+    energyToday+=load*(1/24)*(0.9+Math.random()*0.2);
+    compute();renderDevices();
+  }
+},2000);
+</script>
+</body></html>
